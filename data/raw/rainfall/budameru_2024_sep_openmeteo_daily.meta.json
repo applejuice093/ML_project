@@ -1,0 +1,12 @@
+{
+  "fetched_at_utc": "2026-09-23T10:56:05.525195+00:00",
+  "storm_id": "budameru_2024_sep",
+  "latitude": 16.51,
+  "longitude": 80.63,
+  "start_date": "2024-08-25",
+  "end_date": "2024-09-15",
+  "source": "https://archive-api.open-meteo.com/v1/archive",
+  "timezone": "Asia/Kolkata",
+  "n_days": 22,
+  "total_precip_mm": 485.8
+}

@@ -1,0 +1,9 @@
+{
+  "built_at_utc": "2026-09-23T10:56:07.293856+00:00",
+  "version": "v1",
+  "n_nodes": 11042,
+  "n_edges": 11042,
+  "n_nodes_with_elev": 0,
+  "n_osm_features": 201,
+  "dem_source": null
+}
