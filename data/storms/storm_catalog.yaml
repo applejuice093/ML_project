@@ -1,0 +1,37 @@
+# DrainSense storm catalog — Phase 1 (dataset only)
+# Ground truth = observed flood extents (NRSC / Sentinel-1 / IFI), NOT SCS-CN synthetic labels.
+
+study_area:
+  name: Vijayawada–Budameru
+  state: Andhra Pradesh
+  country: India
+  bbox:
+    min_lat: 16.45
+    max_lat: 16.57
+    min_lon: 80.56
+    max_lon: 80.70
+  crs_geographic: EPSG:4326
+  crs_projected: EPSG:32644
+
+storms:
+  - id: budameru_2024_sep
+    name: Budameru / Vijayawada floods 2024
+    phase: 1
+    priority: 1
+    start_date: "2024-08-31"
+    end_date: "2024-09-09"
+    peak_window:
+      start: "2024-08-31"
+      end: "2024-09-02"
+    notes: >
+      Heavy rain from 31 Aug 2024; Budameru rivulet / diversion canal breaches;
+      severe inundation in Vijayawada (NTR district).
+    rainfall_fetch:
+      start_date: "2024-08-25"
+      end_date: "2024-09-15"
+    sources:
+      - https://en.wikipedia.org/wiki/2024_Vijayawada_floods
+    flood_extent_status: pending_manual
+    labels:
+      allowed: [observed_flood_extent]
+      forbidden: [scs_cn_synthetic]

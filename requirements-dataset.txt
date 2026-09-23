@@ -1,0 +1,8 @@
+numpy>=1.26
+pandas>=2.1
+pyyaml>=6.0
+requests>=2.31
+shapely>=2.0
+networkx>=3.2
+pyproj>=3.6
+geopandas>=0.14

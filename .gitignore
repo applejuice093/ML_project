@@ -1,0 +1,20 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/
+.env
+*.egg-info/
+
+# Large geospatial binaries (regenerate or drop in locally)
+data/raw/dem/*.tif
+data/raw/dem/*.tiff
+data/raw/dem/*.hgt
+data/raw/dem/*.zip
+data/raw/flood_extents/*.tif
+data/raw/flood_extents/*.tiff
+data/processed/drain_graph/**/*.graphml
+data/processed/drain_graph/**/nodes.geojson
+data/processed/drain_graph/**/edges.geojson
