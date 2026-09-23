@@ -1,0 +1,12 @@
+{
+  "updated_at_utc": "2026-09-23T10:55:27.633462+00:00",
+  "bbox": {
+    "min_lat": 16.45,
+    "max_lat": 16.57,
+    "min_lon": 80.56,
+    "max_lon": 80.7
+  },
+  "preferred": "Copernicus GLO-30 (manual CDSE)",
+  "opentopo_dataset": "COP30",
+  "status": "document_only"
+}

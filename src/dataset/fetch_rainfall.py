@@ -59,8 +59,18 @@ def write_csv(daily: dict, path: Path) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch Open-Meteo rainfall")
     parser.add_argument("--storm-id", default="budameru_2024_sep")
-    parser.add_argument("--lat", type=float, default=None)
-    parser.add_argument("--lon", type=float, default=None)
+    parser.add_argument(
+        "--lat",
+        type=float,
+        default=None,
+        help="Override latitude (default: bbox center)",
+    )
+    parser.add_argument(
+        "--lon",
+        type=float,
+        default=None,
+        help="Override longitude (default: bbox center)",
+    )
     args = parser.parse_args()
     ensure_dirs()
     catalog = load_storm_catalog()
