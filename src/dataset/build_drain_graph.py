@@ -19,9 +19,10 @@ from config import INTERIM_DIR, PROCESSED_DIR, RAW_DIR, ensure_dirs
 
 try:
     import geopandas as gpd
-    from shapely.geometry import LineString, Point
+    from shapely.geometry import LineString
 except ImportError:  # pragma: no cover
     gpd = None  # type: ignore
+    LineString = None  # type: ignore
 
 
 EARTH_RADIUS_M = 6_371_008.8
@@ -43,6 +44,11 @@ def load_waterways(path: Path):
 
 
 def graph_from_lines(gdf) -> nx.Graph:
+    """Split every (Multi)LineString into consecutive segments.
+
+    Nodes are vertex coordinates rounded to 6 decimals (~0.1 m), so ways that
+    share a vertex are joined. Duplicate segments are added once.
+    """
     G = nx.Graph()
     for idx, row in gdf.iterrows():
         geom = row.geometry
