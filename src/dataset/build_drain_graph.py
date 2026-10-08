@@ -24,6 +24,18 @@ except ImportError:  # pragma: no cover
     gpd = None  # type: ignore
 
 
+EARTH_RADIUS_M = 6_371_008.8
+
+
+def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+    """Great-circle distance in metres between two lon/lat points (WGS84 sphere)."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = phi2 - phi1
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
+    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
+
+
 def load_waterways(path: Path):
     if gpd is None:
         raise SystemExit("geopandas required: pip install -r requirements-dataset.txt")
@@ -67,7 +79,8 @@ def graph_from_lines(gdf) -> nx.Graph:
                 ) ** 0.5
                 if G.has_edge(u, v):
                     continue
-                G.add_edge(u, v, length_deg=length_deg, **clean)
+                length_m = haversine_m(u[0], u[1], v[0], v[1])
+                G.add_edge(u, v, length_deg=length_deg, length_m=length_m, **clean)
     return G
 
 
