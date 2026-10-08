@@ -1,3 +1,4 @@
+# Core dataset pipeline (python src/dataset/*.py)
 numpy>=1.26
 pandas>=2.1
 pyyaml>=6.0
@@ -6,3 +7,8 @@ shapely>=2.0
 networkx>=3.2
 pyproj>=3.6
 geopandas>=0.14
+
+# Optional: only needed for DEM elevations in build_drain_graph.py and for
+# raster flood masks in attach_labels.py. Needs GDAL wheels; on Windows,
+# prefer `conda install -c conda-forge rasterio` if pip fails.
+# rasterio>=1.3
