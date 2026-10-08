@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,6 +42,10 @@ def graph_from_lines(gdf) -> nx.Graph:
         clean = {}
         for k, v in props.items():
             if v is None:
+                continue
+            # geopandas fills missing OSM tags with NaN; drop them so GraphML
+            # and GeoJSON exports don't carry meaningless "nan" attributes.
+            if isinstance(v, float) and math.isnan(v):
                 continue
             if isinstance(v, (str, int, float, bool)):
                 clean[k] = v
