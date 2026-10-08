@@ -9,6 +9,57 @@ This repository currently contains the **dataset-only** pipeline:
 - Observed flood-extent ingest stubs (NRSC / Sentinel-1 / IFI)
 - Drain-graph build + label attachment (no synthetic SCS-CN labels)
 
-See **[README_DATASET.md](README_DATASET.md)** for layout, sources, and commands.
-
 GNN training is intentionally not implemented yet.
+
+## Quickstart
+
+```bash
+git clone https://github.com/applejuice093/ML_project.git
+cd ML_project
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+
+# 1. Inputs that need no API key
+python src/dataset/fetch_osm_drains.py
+python src/dataset/fetch_rainfall.py --storm-id budameru_2024_sep
+
+# 2. Build the drain graph (DEM elevations are added if a GeoTIFF is in data/raw/dem/)
+python src/dataset/build_drain_graph.py --version v1
+```
+
+DEM download, flood-extent ingest and label attachment need manual steps; see
+**[README_DATASET.md](README_DATASET.md)** for layout, sources, and the full command list,
+and **[STATUS.md](STATUS.md)** for what is done vs. blocked.
+
+## Pipeline
+
+```mermaid
+flowchart LR
+  C[storm_catalog.yaml] --> O[fetch_osm_drains]
+  C --> R[fetch_rainfall]
+  C --> D[download_dem]
+  O --> G[build_drain_graph]
+  D -. optional .-> G
+  F[ingest_flood_extents] --> L[attach_labels]
+  G --> L
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+Tests run offline (no Overpass / Open-Meteo calls) and also run in GitHub Actions on every push.
+
+## Repository layout
+
+| Path | What it holds |
+| --- | --- |
+| `src/dataset/` | Pipeline scripts and shared `config.py` |
+| `data/storms/storm_catalog.yaml` | Study bbox and storm windows |
+| `data/raw/`, `data/interim/`, `data/processed/` | Pipeline inputs and outputs (large rasters/graphs are git-ignored) |
+| `docs/` | Dataset principles and pipeline notes |
+| `tests/` | Offline pytest suite |
+| `NOVELTY.md` | Research contribution, gated on the observed dataset |
