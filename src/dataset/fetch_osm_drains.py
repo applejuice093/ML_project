@@ -67,16 +67,26 @@ def overpass_fetch(query: str, timeout: int = 200) -> dict:
 
 
 def elements_to_geojson(data: dict) -> dict:
-    """Minimal OSM JSON → GeoJSON (LineStrings for ways)."""
+    """Minimal OSM JSON → GeoJSON (LineStrings for ways).
+
+    The ``>;`` recursion in the query returns member ways of relations a second
+    time (as untagged ``skel`` copies), so ways are de-duplicated by id and the
+    tagged copy wins.
+    """
     nodes = {
         el["id"]: (el["lon"], el["lat"])
         for el in data.get("elements", [])
         if el.get("type") == "node" and "lon" in el and "lat" in el
     }
-    features = []
+    ways: dict[int, dict] = {}
     for el in data.get("elements", []):
         if el.get("type") != "way":
             continue
+        prev = ways.get(el["id"])
+        if prev is None or (not prev.get("tags") and el.get("tags")):
+            ways[el["id"]] = el
+    features = []
+    for el in ways.values():
         coords = []
         for nid in el.get("nodes", []):
             if nid in nodes:
