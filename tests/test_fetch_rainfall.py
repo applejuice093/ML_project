@@ -1,0 +1,28 @@
+"""Tests for the Open-Meteo CSV writer (no network)."""
+
+import csv
+
+from fetch_rainfall import write_csv
+
+
+def test_write_csv_rows_and_header(tmp_path):
+    daily = {
+        "time": ["2024-08-31", "2024-09-01"],
+        "precipitation_sum": [120.5, 80.0],
+        "rain_sum": [120.5, 80.0],
+        "precipitation_hours": [20.0, 14.0],
+    }
+    out = tmp_path / "nested" / "rain.csv"
+    n = write_csv(daily, out)
+    assert n == 2
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    assert rows[0] == ["date", "precipitation_sum_mm", "rain_sum_mm", "precipitation_hours"]
+    assert rows[1] == ["2024-08-31", "120.5", "120.5", "20.0"]
+
+
+def test_write_csv_handles_short_series(tmp_path):
+    daily = {"time": ["2024-08-31", "2024-09-01"], "precipitation_sum": [1.0]}
+    out = tmp_path / "rain.csv"
+    assert write_csv(daily, out) == 2
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    assert rows[2] == ["2024-09-01", "", "", ""]
