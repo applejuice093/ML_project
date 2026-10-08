@@ -96,8 +96,17 @@ def main() -> None:
         source_file = str(rasters[0])
     elif vectors:
         method = "vector_intersects"
-        flood = gpd.read_file(vectors[0]).to_crs(nodes.crs)
-        union = flood.unary_union
+        flood = gpd.read_file(vectors[0])
+        if flood.crs is None:
+            print(
+                f"Warning: {vectors[0].name} has no CRS; assuming {nodes.crs}",
+                file=sys.stderr,
+            )
+            flood = flood.set_crs(nodes.crs)
+        else:
+            flood = flood.to_crs(nodes.crs)
+        # GeoPandas >= 1.0 deprecates unary_union in favour of union_all().
+        union = flood.union_all() if hasattr(flood, "union_all") else flood.unary_union
         flooded = [bool(geom.intersects(union)) for geom in nodes.geometry]
         source_file = str(vectors[0])
     else:
