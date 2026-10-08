@@ -31,10 +31,27 @@ def load_storm_catalog(path: Path | None = None) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
+BBOX_KEYS = ("min_lat", "max_lat", "min_lon", "max_lon")
+
+
+def validate_bbox(bbox: dict[str, Any]) -> dict[str, float]:
+    """Return a float-typed copy of ``bbox`` or raise ValueError if malformed."""
+    missing = [k for k in BBOX_KEYS if k not in bbox]
+    if missing:
+        raise ValueError(f"bbox missing keys: {missing}")
+    out = {k: float(bbox[k]) for k in BBOX_KEYS}
+    if not (-90 <= out["min_lat"] < out["max_lat"] <= 90):
+        raise ValueError(f"invalid latitude range: {out['min_lat']}..{out['max_lat']}")
+    if not (-180 <= out["min_lon"] < out["max_lon"] <= 180):
+        raise ValueError(f"invalid longitude range: {out['min_lon']}..{out['max_lon']}")
+    return out
+
+
 def get_bbox(catalog: dict[str, Any] | None = None) -> dict[str, float]:
+    """Study-area bbox from the storm catalog (falls back to DEFAULT_BBOX)."""
     if catalog is None:
         catalog = load_storm_catalog()
-    return dict(catalog.get("study_area", {}).get("bbox", DEFAULT_BBOX))
+    return validate_bbox(catalog.get("study_area", {}).get("bbox", DEFAULT_BBOX))
 
 
 def get_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -47,6 +64,7 @@ def get_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str,
 
 
 def bbox_overpass(bbox: dict[str, float]) -> str:
+    """Format a bbox as Overpass expects: ``south,west,north,east``."""
     return (
         f"{bbox['min_lat']},{bbox['min_lon']},"
         f"{bbox['max_lat']},{bbox['max_lon']}"
