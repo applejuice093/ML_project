@@ -98,7 +98,9 @@ def main() -> None:
                 "\nNo --input provided. Drop a file then re-run with --input.",
                 file=sys.stderr,
             )
-            sys.exit(0 if args.checklist else 2)
+            sys.exit(2)
+        if args.input is not None:
+            print("--checklist given: skipping ingest of --input.", file=sys.stderr)
         return
 
     storm = get_storm(args.storm_id)
