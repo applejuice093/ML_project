@@ -15,7 +15,7 @@
 - Edges now carry `length_m` (haversine); NaN OSM tags no longer exported → **rebuild graph v1** to pick these up
 - OSM ways de-duplicated (relation recursion produced duplicate tagless copies)
 - Flood rasters sampled in their own CRS; CRS-less vectors handled; shapefile sidecars copied on ingest
-- Offline pytest suite (`pytest`) + GitHub Actions CI
+- Offline pytest suite (`pytest`); CI workflow not yet added
 
 ## Local checkout
 ```
