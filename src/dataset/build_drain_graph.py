@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,9 +19,22 @@ from config import INTERIM_DIR, PROCESSED_DIR, RAW_DIR, ensure_dirs
 
 try:
     import geopandas as gpd
-    from shapely.geometry import LineString, Point
+    from shapely.geometry import LineString
 except ImportError:  # pragma: no cover
     gpd = None  # type: ignore
+    LineString = None  # type: ignore
+
+
+EARTH_RADIUS_M = 6_371_008.8
+
+
+def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+    """Great-circle distance in metres between two lon/lat points (WGS84 sphere)."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = phi2 - phi1
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
+    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
 
 
 def load_waterways(path: Path):
@@ -30,6 +44,11 @@ def load_waterways(path: Path):
 
 
 def graph_from_lines(gdf) -> nx.Graph:
+    """Split every (Multi)LineString into consecutive segments.
+
+    Nodes are vertex coordinates rounded to 6 decimals (~0.1 m), so ways that
+    share a vertex are joined. Duplicate segments are added once.
+    """
     G = nx.Graph()
     for idx, row in gdf.iterrows():
         geom = row.geometry
@@ -41,6 +60,10 @@ def graph_from_lines(gdf) -> nx.Graph:
         clean = {}
         for k, v in props.items():
             if v is None:
+                continue
+            # geopandas fills missing OSM tags with NaN; drop them so GraphML
+            # and GeoJSON exports don't carry meaningless "nan" attributes.
+            if isinstance(v, float) and math.isnan(v):
                 continue
             if isinstance(v, (str, int, float, bool)):
                 clean[k] = v
@@ -62,7 +85,8 @@ def graph_from_lines(gdf) -> nx.Graph:
                 ) ** 0.5
                 if G.has_edge(u, v):
                     continue
-                G.add_edge(u, v, length_deg=length_deg, **clean)
+                length_m = haversine_m(u[0], u[1], v[0], v[1])
+                G.add_edge(u, v, length_deg=length_deg, length_m=length_m, **clean)
     return G
 
 

@@ -16,6 +16,22 @@ from pathlib import Path
 
 from config import INTERIM_DIR, RAW_DIR, ensure_dirs, get_storm
 
+# A shapefile is only usable together with its sidecar files.
+SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".qix", ".sbn", ".sbx")
+
+
+def copy_with_sidecars(src: Path, dest_dir: Path) -> list[Path]:
+    """Copy ``src`` into ``dest_dir``; for .shp also copy any sidecar files."""
+    copied = [Path(shutil.copy2(src, dest_dir / src.name))]
+    if src.suffix.lower() == ".shp":
+        for ext in SHAPEFILE_SIDECARS:
+            for cand in (src.with_suffix(ext), src.with_suffix(ext.upper())):
+                if cand.exists():
+                    copied.append(Path(shutil.copy2(cand, dest_dir / cand.name)))
+                    break
+    return copied
+
+
 CHECKLIST = """
 Sep 2024 Budameru flood extents — manual checklist
 ==================================================
@@ -82,7 +98,9 @@ def main() -> None:
                 "\nNo --input provided. Drop a file then re-run with --input.",
                 file=sys.stderr,
             )
-            sys.exit(0 if args.checklist else 2)
+            sys.exit(2)
+        if args.input is not None:
+            print("--checklist given: skipping ingest of --input.", file=sys.stderr)
         return
 
     storm = get_storm(args.storm_id)
@@ -93,8 +111,8 @@ def main() -> None:
 
     dest_dir = INTERIM_DIR / "flood_extents" / args.storm_id
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / src.name
-    shutil.copy2(src, dest)
+    copied = copy_with_sidecars(src, dest_dir)
+    dest = copied[0]
     meta = {
         "ingested_at_utc": datetime.now(timezone.utc).isoformat(),
         "storm_id": args.storm_id,
@@ -104,6 +122,7 @@ def main() -> None:
         },
         "source_path": str(src),
         "interim_path": str(dest),
+        "copied_files": [p.name for p in copied],
         "label_type": "observed_flood_extent",
         "synthetic_scs_cn": False,
     }

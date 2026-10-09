@@ -75,20 +75,38 @@ def main() -> None:
     if rasters:
         method = "raster_sample"
         with rasterio.open(rasters[0]) as src:
-            for _, row in nodes.iterrows():
-                lon, lat = row.geometry.x, row.geometry.y
+            # Flood rasters are often in a projected CRS (e.g. UTM 44N); sample
+            # with node coordinates expressed in the raster's own CRS.
+            pts = nodes
+            if src.crs is not None and nodes.crs is not None:
+                pts = nodes.to_crs(src.crs)
+            nodata = src.nodata
+            coords = [(g.x, g.y) for g in pts.geometry]
+            for val in src.sample(coords):
                 try:
-                    val = list(src.sample([(lon, lat)]))[0][0]
-                    nodata = src.nodata
-                    is_flood = val is not None and val != nodata and float(val) > 0
+                    v = val[0]
+                    is_flood = (
+                        v is not None
+                        and not (nodata is not None and v == nodata)
+                        and float(v) > 0
+                    )
                 except Exception:  # noqa: BLE001
                     is_flood = False
                 flooded.append(bool(is_flood))
         source_file = str(rasters[0])
     elif vectors:
         method = "vector_intersects"
-        flood = gpd.read_file(vectors[0]).to_crs(nodes.crs)
-        union = flood.unary_union
+        flood = gpd.read_file(vectors[0])
+        if flood.crs is None:
+            print(
+                f"Warning: {vectors[0].name} has no CRS; assuming {nodes.crs}",
+                file=sys.stderr,
+            )
+            flood = flood.set_crs(nodes.crs)
+        else:
+            flood = flood.to_crs(nodes.crs)
+        # GeoPandas >= 1.0 deprecates unary_union in favour of union_all().
+        union = flood.union_all() if hasattr(flood, "union_all") else flood.unary_union
         flooded = [bool(geom.intersects(union)) for geom in nodes.geometry]
         source_file = str(vectors[0])
     else:

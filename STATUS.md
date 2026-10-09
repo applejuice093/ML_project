@@ -11,6 +11,12 @@
 - DEM GeoTIFF → `data/raw/dem/budameru_dem.tif` (see `download_dem.py`)
 - Observed flood extent → `data/raw/flood_extents/` (NRSC/Sentinel-1; never SCS-CN)
 
+## Pipeline hardening (2026-10-08, branch `upgrade/2026-10-08-dataset-hardening`)
+- Edges now carry `length_m` (haversine); NaN OSM tags no longer exported → **rebuild graph v1** to pick these up
+- OSM ways de-duplicated (relation recursion produced duplicate tagless copies)
+- Flood rasters sampled in their own CRS; CRS-less vectors handled; shapefile sidecars copied on ingest
+- Offline pytest suite (`pytest`); CI workflow not yet added
+
 ## Local checkout
 ```
 git clone https://github.com/applejuice093/ML_project.git C:\A\PROJECT\ML_project

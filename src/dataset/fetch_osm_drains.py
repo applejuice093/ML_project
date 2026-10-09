@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,9 +46,8 @@ out skel qt;
 """.strip()
 
 
-def overpass_fetch(query: str, timeout: int = 200) -> dict:
-    import time
-
+def overpass_fetch(query: str, timeout: int = 200, retry_delay_s: float = 5.0) -> dict:
+    """POST the query to each mirror in turn; return the first JSON response."""
     last_err: Exception | None = None
     for url in OVERPASS_URLS:
         try:
@@ -62,21 +62,32 @@ def overpass_fetch(query: str, timeout: int = 200) -> dict:
         except Exception as e:  # noqa: BLE001
             last_err = e
             print(f"Overpass failed at {url}: {e}", file=sys.stderr)
-            time.sleep(5)
+            if url != OVERPASS_URLS[-1]:
+                time.sleep(retry_delay_s)
     raise RuntimeError(f"All Overpass endpoints failed: {last_err}")
 
 
 def elements_to_geojson(data: dict) -> dict:
-    """Minimal OSM JSON → GeoJSON (LineStrings for ways)."""
+    """Minimal OSM JSON → GeoJSON (LineStrings for ways).
+
+    The ``>;`` recursion in the query returns member ways of relations a second
+    time (as untagged ``skel`` copies), so ways are de-duplicated by id and the
+    tagged copy wins.
+    """
     nodes = {
         el["id"]: (el["lon"], el["lat"])
         for el in data.get("elements", [])
         if el.get("type") == "node" and "lon" in el and "lat" in el
     }
-    features = []
+    ways: dict[int, dict] = {}
     for el in data.get("elements", []):
         if el.get("type") != "way":
             continue
+        prev = ways.get(el["id"])
+        if prev is None or (not prev.get("tags") and el.get("tags")):
+            ways[el["id"]] = el
+    features = []
+    for el in ways.values():
         coords = []
         for nid in el.get("nodes", []):
             if nid in nodes:
@@ -91,7 +102,7 @@ def elements_to_geojson(data: dict) -> dict:
                 "properties": {
                     "osm_id": el["id"],
                     "osm_type": "way",
-                    **{k: v for k, v in tags.items()},
+                    **tags,
                 },
             }
         )
