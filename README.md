@@ -51,7 +51,7 @@ flowchart LR
 pytest
 ```
 
-Tests run offline (no Overpass / Open-Meteo calls) and also run in GitHub Actions on every push.
+Tests run offline (no Overpass / Open-Meteo calls).
 
 ## Repository layout
 
