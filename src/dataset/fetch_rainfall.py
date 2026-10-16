@@ -97,6 +97,10 @@ def main() -> None:
     rf = storm.get("rainfall_fetch") or {}
     start = rf.get("start_date") or storm["start_date"]
     end = rf.get("end_date") or storm["end_date"]
+    if not start or not end:
+        raise SystemExit(f"Storm {args.storm_id} is missing start/end dates")
+    if str(start) > str(end):
+        raise SystemExit(f"Invalid rainfall window: {start} > {end}")
 
     print(f"Storm {args.storm_id}: {start} → {end} @ ({lat:.4f}, {lon:.4f})")
     data = fetch_open_meteo(lat, lon, start, end)
