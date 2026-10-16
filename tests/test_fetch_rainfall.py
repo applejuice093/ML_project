@@ -1,8 +1,10 @@
+import pytest
+
 """Tests for the Open-Meteo CSV writer (no network)."""
 
 import csv
 
-from fetch_rainfall import write_csv
+from fetch_rainfall import summarize_daily_precip, write_csv
 
 
 def test_write_csv_rows_and_header(tmp_path):
@@ -26,3 +28,17 @@ def test_write_csv_handles_short_series(tmp_path):
     assert write_csv(daily, out) == 2
     rows = list(csv.reader(out.open(encoding="utf-8")))
     assert rows[2] == ["2024-09-01", "", "", ""]
+
+
+def test_summarize_daily_precip_skips_none():
+    daily = {
+        "time": ["2024-08-31", "2024-09-01", "2024-09-02"],
+        "precipitation_sum": [10.0, None, 5.5],
+    }
+    n, total = summarize_daily_precip(daily)
+    assert n == 3
+    assert total == pytest.approx(15.5)
+
+
+def test_summarize_daily_precip_empty():
+    assert summarize_daily_precip({}) == (0, 0.0)

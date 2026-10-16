@@ -46,3 +46,27 @@ def test_bbox_overpass_order_is_south_west_north_east():
 def test_validate_bbox_rejects_bad_input(bad):
     with pytest.raises(ValueError):
         config.validate_bbox(bad)
+
+
+def test_bbox_center_is_midpoint():
+    lat, lon = config.bbox_center(config.DEFAULT_BBOX)
+    assert lat == pytest.approx(16.51)
+    assert lon == pytest.approx(80.63)
+
+
+def test_list_storm_ids_includes_budameru():
+    assert "budameru_2024_sep" in config.list_storm_ids()
+
+
+def test_list_storm_ids_empty_catalog():
+    assert config.list_storm_ids({"storms": []}) == []
+
+
+def test_load_storm_catalog_missing_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        config.load_storm_catalog(tmp_path / "nope.yaml")
+
+
+def test_get_storm_error_lists_known_ids():
+    with pytest.raises(KeyError, match="known"):
+        config.get_storm("missing", {"storms": [{"id": "only_one"}]})
