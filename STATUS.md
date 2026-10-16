@@ -1,4 +1,4 @@
-# Dataset status (2026-09-23)
+# Dataset status (2026-10-16)
 
 ## Done
 - Repo scaffold (dataset-only)
@@ -16,6 +16,15 @@
 - OSM ways de-duplicated (relation recursion produced duplicate tagless copies)
 - Flood rasters sampled in their own CRS; CRS-less vectors handled; shapefile sidecars copied on ingest
 - Offline pytest suite (`pytest`); CI workflow not yet added
+
+## Pipeline polish (2026-10-16, branch `upgrade/2026-10-16-ml-project-polish`)
+- Config: `bbox_center`, `list_storm_ids`, clearer catalog / storm errors
+- Rainfall: precip summary helper; uses shared bbox centre
+- Graph: skip rounded self-loops; `n_components` / isolated / largest-component in `graph.meta.json`
+- OSM: drop ways that still lack `waterway=*` after de-duplication
+- Labels: extractable raster/vector listing + sampling helpers
+- Ingest: reject unsupported --input extensions
+- Offline pytest suite expanded (run `pytest` locally; no CI workflow yet)
 
 ## Local checkout
 ```

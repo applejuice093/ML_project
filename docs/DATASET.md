@@ -27,3 +27,24 @@ Labeled nodes (`data/processed/labeled/<storm>/<version>/nodes_labeled.geojson`)
 `flooded` (bool), `label_source` (always `observed_flood_extent`) and `storm_id`.
 
 Local path: `C:\A\PROJECT\ML_project`.
+
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `OSM GeoJSON missing` from `build_drain_graph.py` | Fetch not run | `python src/dataset/fetch_osm_drains.py` |
+| Graph builds but `elev_m` is absent / `n_nodes_with_elev=0` | No DEM GeoTIFF or no rasterio | Place a `.tif` under `data/raw/dem/` and optionally `pip install rasterio` |
+| `attach_labels.py` exits 2 | No ingested flood extents | Drop an observed product and run `ingest_flood_extents.py --input …` |
+| `Unsupported input extension` on ingest | Wrong file type | Use `.tif`/`.tiff`/`.geojson`/`.gpkg`/`.shp` only |
+| Overpass timeouts | Mirror busy | Script retries several mirrors; re-run later |
+| Tests need network | They must not | Suite is offline; if a test hits the network, that is a bug |
+
+## Rebuild checklist
+
+After pulling graph/OSM fixes, regenerate locally (large GraphML is gitignored):
+
+```bash
+python src/dataset/build_drain_graph.py --version v1
+# Inspect data/processed/drain_graph/v1/graph.meta.json for n_components
+```
