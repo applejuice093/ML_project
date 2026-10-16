@@ -76,6 +76,10 @@ def graph_from_lines(gdf) -> nx.Graph:
             for i in range(len(coords) - 1):
                 u = (round(coords[i][0], 6), round(coords[i][1], 6))
                 v = (round(coords[i + 1][0], 6), round(coords[i + 1][1], 6))
+                # After 6-dp rounding, consecutive vertices can collapse; skip
+                # zero-length self-loops so GraphML stays a simple network.
+                if u == v:
+                    continue
                 if u not in G:
                     G.add_node(u, lon=u[0], lat=u[1])
                 if v not in G:
