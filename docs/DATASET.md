@@ -26,6 +26,14 @@ Storm: **budameru_2024_sep** (2024-08-31 → 2024-09-09).
 Labeled nodes (`data/processed/labeled/<storm>/<version>/nodes_labeled.geojson`) add
 `flooded` (bool), `label_source` (always `observed_flood_extent`) and `storm_id`.
 
+`graph.meta.json` also records connectivity after each build:
+
+| Field | Meaning |
+| --- | --- |
+| `n_components` | Connected-component count in the undirected drain graph |
+| `n_isolated_nodes` | Nodes with degree 0 (should stay rare for waterway lines) |
+| `largest_component_nodes` | Node count of the biggest component |
+
 Local path: `C:\A\PROJECT\ML_project`.
 
 
