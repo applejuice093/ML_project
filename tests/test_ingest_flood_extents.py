@@ -1,6 +1,8 @@
 """Tests for flood-extent ingest helpers."""
 
-from ingest_flood_extents import copy_with_sidecars
+from pathlib import Path
+
+from ingest_flood_extents import copy_with_sidecars, is_allowed_flood_input
 
 
 def test_copy_with_sidecars_copies_shapefile_parts(tmp_path):
@@ -31,3 +33,12 @@ def test_copy_with_sidecars_single_file_for_geotiff(tmp_path):
     dest.mkdir()
     copied = copy_with_sidecars(src, dest)
     assert [p.name for p in copied] == ["flood.tif"]
+
+
+def test_is_allowed_flood_input_extensions():
+    assert is_allowed_flood_input(Path("flood.tif"))
+    assert is_allowed_flood_input(Path("flood.TIFF"))
+    assert is_allowed_flood_input(Path("flood.geojson"))
+    assert is_allowed_flood_input(Path("flood.shp"))
+    assert not is_allowed_flood_input(Path("flood.csv"))
+    assert not is_allowed_flood_input(Path("notes.md"))

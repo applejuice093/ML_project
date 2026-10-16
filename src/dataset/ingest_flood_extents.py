@@ -21,6 +21,11 @@ SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".qix", ".sbn", ".sbx")
 ALLOWED_INPUT_EXTENSIONS = {".tif", ".tiff", ".geojson", ".json", ".gpkg", ".shp"}
 
 
+def is_allowed_flood_input(path: Path) -> bool:
+    """True if ``path`` looks like an observed flood-extent file we can ingest."""
+    return path.suffix.lower() in ALLOWED_INPUT_EXTENSIONS
+
+
 def copy_with_sidecars(src: Path, dest_dir: Path) -> list[Path]:
     """Copy ``src`` into ``dest_dir``; for .shp also copy any sidecar files."""
     copied = [Path(shutil.copy2(src, dest_dir / src.name))]
@@ -109,7 +114,7 @@ def main() -> None:
     if not src.exists():
         print(f"Input not found: {src}", file=sys.stderr)
         sys.exit(1)
-    if src.suffix.lower() not in ALLOWED_INPUT_EXTENSIONS:
+    if not is_allowed_flood_input(src):
         print(
             f"Unsupported input extension {src.suffix!r}; "
             f"expected one of {sorted(ALLOWED_INPUT_EXTENSIONS)}",
