@@ -98,8 +98,10 @@ def ensure_dirs() -> None:
         RAW_DIR / "osm",
         RAW_DIR / "rainfall",
         RAW_DIR / "flood_extents",
-        INTERIM_DIR,
-        PROCESSED_DIR,
+        INTERIM_DIR / "flood_extents",
+        INTERIM_DIR / "drain_graph",
+        PROCESSED_DIR / "drain_graph",
+        PROCESSED_DIR / "labeled",
     ):
         d.mkdir(parents=True, exist_ok=True)
 
