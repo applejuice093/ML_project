@@ -119,6 +119,19 @@ def attach_dem_elevations(G: nx.Graph, dem_path: Path | None) -> int:
     return n
 
 
+def graph_component_stats(G: nx.Graph) -> dict[str, int]:
+    """Return simple connectivity stats for graph.meta.json."""
+    if G.number_of_nodes() == 0:
+        return {"n_components": 0, "n_isolated_nodes": 0, "largest_component_nodes": 0}
+    components = list(nx.connected_components(G))
+    sizes = [len(c) for c in components]
+    return {
+        "n_components": len(components),
+        "n_isolated_nodes": sum(1 for s in sizes if s == 1),
+        "largest_component_nodes": max(sizes),
+    }
+
+
 def export_geojson(G: nx.Graph, nodes_path: Path, edges_path: Path) -> None:
     node_features = []
     for nid, data in G.nodes(data=True):
@@ -188,7 +201,11 @@ def main() -> None:
         )
         dem_path = cands[0] if cands else None
     n_z = attach_dem_elevations(G, dem_path)
-    print(f"Graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges; elev={n_z}")
+    stats = graph_component_stats(G)
+    print(
+        f"Graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges; "
+        f"elev={n_z}; components={stats['n_components']}"
+    )
 
     out_dir = PROCESSED_DIR / "drain_graph" / args.version
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -213,6 +230,7 @@ def main() -> None:
         "n_edges": G.number_of_edges(),
         "n_nodes_with_elev": n_z,
         "n_osm_features": len(gdf),
+        **stats,
     }
     with open(out_dir / "graph.meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
