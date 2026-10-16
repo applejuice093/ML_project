@@ -7,7 +7,11 @@ import pytest
 gpd = pytest.importorskip("geopandas")
 from shapely.geometry import LineString, MultiLineString  # noqa: E402
 
-from build_drain_graph import graph_from_lines, haversine_m  # noqa: E402
+from build_drain_graph import (  # noqa: E402
+    graph_component_stats,
+    graph_from_lines,
+    haversine_m,
+)
 
 
 def test_haversine_one_degree_latitude_is_about_111km():
@@ -50,3 +54,49 @@ def test_graph_ignores_empty_geometries():
         {"waterway": ["drain"]}, geometry=[LineString()], crs="EPSG:4326"
     )
     assert graph_from_lines(gdf).number_of_nodes() == 0
+
+
+def test_graph_skips_self_loops_from_rounding():
+    # Nearly identical vertices that round to the same 6-dp coordinate.
+    gdf = gpd.GeoDataFrame(
+        {"waterway": ["drain"]},
+        geometry=[
+            LineString(
+                [
+                    (80.6000001, 16.5000001),
+                    (80.6000004, 16.5000002),  # collapses with first after round(6)
+                    (80.6100000, 16.5000000),
+                ]
+            )
+        ],
+        crs="EPSG:4326",
+    )
+    G = graph_from_lines(gdf)
+    assert G.number_of_nodes() == 2
+    assert G.number_of_edges() == 1
+    assert all(u != v for u, v in G.edges())
+
+
+def test_graph_component_stats_empty():
+    import networkx as nx
+
+    assert graph_component_stats(nx.Graph()) == {
+        "n_components": 0,
+        "n_isolated_nodes": 0,
+        "largest_component_nodes": 0,
+    }
+
+
+def test_graph_component_stats_two_components():
+    gdf = gpd.GeoDataFrame(
+        {"waterway": ["drain", "canal"]},
+        geometry=[
+            LineString([(80.60, 16.50), (80.61, 16.50)]),
+            LineString([(80.70, 16.55), (80.71, 16.55)]),
+        ],
+        crs="EPSG:4326",
+    )
+    stats = graph_component_stats(graph_from_lines(gdf))
+    assert stats["n_components"] == 2
+    assert stats["largest_component_nodes"] == 2
+    assert stats["n_isolated_nodes"] == 0
