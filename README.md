@@ -53,6 +53,15 @@ pytest
 
 Tests run offline (no Overpass / Open-Meteo calls).
 
+## Troubleshooting
+
+- **Missing OSM GeoJSON** when building the graph → run `fetch_osm_drains.py` first.
+- **No elevations on nodes** → drop a DEM GeoTIFF into `data/raw/dem/` (see `download_dem.py --document-only`); install optional `rasterio` if needed.
+- **Cannot attach labels** → observed flood extents are still manual; see `ingest_flood_extents.py --checklist`. Never use SCS-CN as ground truth.
+- **Tests** → `pip install -r requirements-dev.txt && pytest` (offline; no GitHub Actions workflow in this repo yet).
+
+See **[STATUS.md](STATUS.md)** for done vs blocked, and **[docs/DATASET.md](docs/DATASET.md)** for schema + troubleshooting.
+
 ## Repository layout
 
 | Path | What it holds |

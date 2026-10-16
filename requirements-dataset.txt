@@ -1,3 +1,4 @@
+# Requires Python 3.10+ (uses PEP 604 unions and list[str] builtins).
 # Core dataset pipeline (python src/dataset/*.py)
 numpy>=1.26
 pandas>=2.1

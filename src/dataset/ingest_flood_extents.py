@@ -18,6 +18,12 @@ from config import INTERIM_DIR, RAW_DIR, ensure_dirs, get_storm
 
 # A shapefile is only usable together with its sidecar files.
 SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".qix", ".sbn", ".sbx")
+ALLOWED_INPUT_EXTENSIONS = {".tif", ".tiff", ".geojson", ".json", ".gpkg", ".shp"}
+
+
+def is_allowed_flood_input(path: Path) -> bool:
+    """True if ``path`` looks like an observed flood-extent file we can ingest."""
+    return path.suffix.lower() in ALLOWED_INPUT_EXTENSIONS
 
 
 def copy_with_sidecars(src: Path, dest_dir: Path) -> list[Path]:
@@ -107,6 +113,13 @@ def main() -> None:
     src = args.input
     if not src.exists():
         print(f"Input not found: {src}", file=sys.stderr)
+        sys.exit(1)
+    if not is_allowed_flood_input(src):
+        print(
+            f"Unsupported input extension {src.suffix!r}; "
+            f"expected one of {sorted(ALLOWED_INPUT_EXTENSIONS)}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     dest_dir = INTERIM_DIR / "flood_extents" / args.storm_id

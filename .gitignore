@@ -23,3 +23,16 @@ data/processed/drain_graph/**/edges.geojson
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Labeled outputs and interim flood copies (regenerate from raw drops)
+data/processed/labeled/
+data/interim/flood_extents/
+data/interim/drain_graph/
+
+# Local rainfall JSON dumps (CSV + .meta.json stay tracked when small)
+data/raw/rainfall/*_openmeteo_daily.json
+
+# Editor / tooling
+*.swp
+.mypy_cache/
+.ruff_cache/
