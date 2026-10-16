@@ -36,3 +36,17 @@ def test_elements_to_geojson_dedupes_ways_and_keeps_tags():
 
 def test_elements_to_geojson_empty():
     assert elements_to_geojson({})["features"] == []
+
+
+def test_elements_to_geojson_drops_ways_without_waterway_tag():
+    data = {
+        "elements": [
+            {"type": "node", "id": 1, "lon": 80.60, "lat": 16.50},
+            {"type": "node", "id": 2, "lon": 80.61, "lat": 16.51},
+            # Only a skeleton copy — no tags at all.
+            {"type": "way", "id": 20, "nodes": [1, 2]},
+            # Tagged non-waterway attribute should still be dropped.
+            {"type": "way", "id": 21, "nodes": [1, 2], "tags": {"highway": "path"}},
+        ]
+    }
+    assert elements_to_geojson(data)["features"] == []
