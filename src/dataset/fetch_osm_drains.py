@@ -88,13 +88,17 @@ def elements_to_geojson(data: dict) -> dict:
             ways[el["id"]] = el
     features = []
     for el in ways.values():
+        tags = el.get("tags", {}) or {}
+        # Skeleton copies from relation recursion can win when no tagged
+        # duplicate exists; they have no waterway=* and are not drains.
+        if "waterway" not in tags:
+            continue
         coords = []
         for nid in el.get("nodes", []):
             if nid in nodes:
                 coords.append(list(nodes[nid]))
         if len(coords) < 2:
             continue
-        tags = el.get("tags", {}) or {}
         features.append(
             {
                 "type": "Feature",
