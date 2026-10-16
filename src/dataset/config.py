@@ -54,6 +54,14 @@ def get_bbox(catalog: dict[str, Any] | None = None) -> dict[str, float]:
     return validate_bbox(catalog.get("study_area", {}).get("bbox", DEFAULT_BBOX))
 
 
+def bbox_center(bbox: dict[str, float]) -> tuple[float, float]:
+    """Return ``(lat, lon)`` at the centre of a validated bbox."""
+    b = validate_bbox(bbox)
+    lat = (b["min_lat"] + b["max_lat"]) / 2.0
+    lon = (b["min_lon"] + b["max_lon"]) / 2.0
+    return lat, lon
+
+
 def get_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str, Any]:
     if catalog is None:
         catalog = load_storm_catalog()
