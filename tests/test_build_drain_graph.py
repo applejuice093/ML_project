@@ -8,6 +8,7 @@ gpd = pytest.importorskip("geopandas")
 from shapely.geometry import LineString, MultiLineString  # noqa: E402
 
 from build_drain_graph import (  # noqa: E402
+    find_default_dem,
     graph_component_stats,
     graph_from_lines,
     haversine_m,
@@ -100,3 +101,14 @@ def test_graph_component_stats_two_components():
     assert stats["n_components"] == 2
     assert stats["largest_component_nodes"] == 2
     assert stats["n_isolated_nodes"] == 0
+
+
+def test_find_default_dem_is_sorted_and_case_insensitive(tmp_path):
+    for name in ("z_dem.tif", "A_DEM.TIF", "notes.txt", "b_dem.tiff"):
+        (tmp_path / name).write_bytes(b"x")
+    assert find_default_dem(tmp_path).name == "A_DEM.TIF"
+
+
+def test_find_default_dem_none_when_missing(tmp_path):
+    assert find_default_dem(tmp_path) is None
+    assert find_default_dem(tmp_path / "absent") is None

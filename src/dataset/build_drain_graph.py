@@ -94,6 +94,24 @@ def graph_from_lines(gdf) -> nx.Graph:
     return G
 
 
+DEM_SUFFIXES = (".tif", ".tiff")
+
+
+def find_default_dem(dem_dir: Path) -> Path | None:
+    """Return the first GeoTIFF in ``dem_dir`` by name, or None.
+
+    Sorted so repeated builds pick the same file (``glob`` order is
+    filesystem-dependent), and case-insensitive so ``DEM.TIF`` from Windows
+    tools is found too.
+    """
+    if not dem_dir.is_dir():
+        return None
+    cands = sorted(
+        p for p in dem_dir.iterdir() if p.is_file() and p.suffix.lower() in DEM_SUFFIXES
+    )
+    return cands[0] if cands else None
+
+
 def attach_dem_elevations(G: nx.Graph, dem_path: Path | None) -> int:
     """Sample DEM at nodes if rasterio + DEM exist. Returns count of nodes with z."""
     if dem_path is None or not dem_path.exists():
@@ -195,11 +213,9 @@ def main() -> None:
     G = graph_from_lines(gdf)
     dem_path = args.dem
     if dem_path is None:
-        # pick first tif in raw/dem if present
-        cands = list((RAW_DIR / "dem").glob("*.tif")) + list(
-            (RAW_DIR / "dem").glob("*.tiff")
-        )
-        dem_path = cands[0] if cands else None
+        dem_path = find_default_dem(RAW_DIR / "dem")
+        if dem_path is not None:
+            print(f"Using DEM {dem_path} (pass --dem to choose another)")
     n_z = attach_dem_elevations(G, dem_path)
     stats = graph_component_stats(G)
     print(
