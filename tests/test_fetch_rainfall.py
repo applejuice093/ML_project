@@ -1,9 +1,10 @@
-import pytest
-
-"""Tests for the Open-Meteo CSV writer (no network)."""
+"""Tests for the Open-Meteo client and CSV writer (no network)."""
 
 import csv
 
+import pytest
+
+import fetch_rainfall
 from fetch_rainfall import summarize_daily_precip, write_csv
 
 
@@ -42,3 +43,34 @@ def test_summarize_daily_precip_skips_none():
 
 def test_summarize_daily_precip_empty():
     assert summarize_daily_precip({}) == (0, 0.0)
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._payload
+
+
+def test_fetch_open_meteo_sends_expected_params(monkeypatch):
+    calls = {}
+
+    def fake_get(url, params, timeout):
+        calls.update(url=url, params=params, timeout=timeout)
+        return _FakeResponse({"daily": {"time": []}})
+
+    monkeypatch.setattr(fetch_rainfall.requests, "get", fake_get)
+    out = fetch_rainfall.fetch_open_meteo(16.51, 80.63, "2024-08-25", "2024-09-15")
+
+    assert out == {"daily": {"time": []}}
+    assert calls["url"] == fetch_rainfall.ARCHIVE_URL
+    assert calls["params"]["latitude"] == 16.51
+    assert calls["params"]["longitude"] == 80.63
+    assert calls["params"]["start_date"] == "2024-08-25"
+    assert calls["params"]["end_date"] == "2024-09-15"
+    assert "precipitation_sum" in calls["params"]["daily"]
+    assert calls["params"]["timezone"] == "Asia/Kolkata"

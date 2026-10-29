@@ -42,3 +42,13 @@ def test_is_allowed_flood_input_extensions():
     assert is_allowed_flood_input(Path("flood.shp"))
     assert not is_allowed_flood_input(Path("flood.csv"))
     assert not is_allowed_flood_input(Path("notes.md"))
+
+
+def test_copy_with_sidecars_is_noop_for_file_already_in_dest(tmp_path):
+    dest = tmp_path / "interim"
+    dest.mkdir()
+    for ext in (".shp", ".dbf"):
+        (dest / f"flood{ext}").write_bytes(b"x")
+    copied = copy_with_sidecars(dest / "flood.shp", dest)
+    assert [p.name for p in copied] == ["flood.shp", "flood.dbf"]
+    assert (dest / "flood.shp").read_bytes() == b"x"

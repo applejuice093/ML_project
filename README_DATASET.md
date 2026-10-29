@@ -62,6 +62,14 @@ python src/dataset/build_drain_graph.py --version v1
 python src/dataset/attach_labels.py --storm-id budameru_2024_sep --graph-version v1
 ```
 
+## Storm catalog rules
+
+Each entry in `data/storms/storm_catalog.yaml` needs an `id`, `start_date` and
+`end_date` (`YYYY-MM-DD`, quoted or not). An optional `peak_window` must sit inside
+the storm window, and `rainfall_fetch` may widen the rainfall window. `pytest`
+checks every entry (`config.validate_storm`), and the scripts refuse an unknown
+or inconsistent `--storm-id`.
+
 ## Clone onto Windows
 
 ```powershell

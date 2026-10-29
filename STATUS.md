@@ -1,4 +1,4 @@
-# Dataset status (2026-10-16)
+# Dataset status (2026-10-29)
 
 ## Done
 - Repo scaffold (dataset-only)
@@ -25,6 +25,15 @@
 - Labels: extractable raster/vector listing + sampling helpers
 - Ingest: reject unsupported --input extensions
 - Offline pytest suite expanded (run `pytest` locally; no CI workflow yet)
+
+## Pipeline safety (2026-10-29, branch `upgrade/2026-10-29-pipeline-safety`)
+- Config: storm windows parsed as real dates; `validate_storm` checks every catalog entry; `require_storm` gives a clean CLI error for a bad `--storm-id`
+- Rainfall: `--lat/--lon` range check + warning outside the bbox; empty Open-Meteo responses fail instead of writing a 0 mm CSV
+- OSM: Overpass `runtime error` remarks (partial results on timeout) now trigger the next mirror
+- DEM: atomic `.part` download, API key redacted from errors; DEM auto-pick is sorted / case-insensitive
+- Graph: DEM sampled in its own CRS (projected DEMs work); NaN nodata dropped → **rebuild graph v1 if a projected DEM was used**
+- Labels: warns when several flood products sit in one interim folder
+- Ingest: re-ingesting a file already in interim no longer crashes
 
 ## Local checkout
 ```

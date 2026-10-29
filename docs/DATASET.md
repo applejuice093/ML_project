@@ -46,6 +46,12 @@ Local path: `C:\A\PROJECT\ML_project`.
 | `attach_labels.py` exits 2 | No ingested flood extents | Drop an observed product and run `ingest_flood_extents.py --input …` |
 | `Unsupported input extension` on ingest | Wrong file type | Use `.tif`/`.tiff`/`.geojson`/`.gpkg`/`.shp` only |
 | Overpass timeouts | Mirror busy | Script retries several mirrors; re-run later |
+| `Bad --storm-id '…'` | Typo, or the catalog entry is inconsistent | Use an id from `storm_catalog.yaml`; the message lists known ids |
+| `elev_m` missing with a DEM present | DEM nodata everywhere, or wrong file auto-picked | Pass `--dem` explicitly; the build logs which DEM it used |
+| `Warning: … is outside the study bbox` | `--lat`/`--lon` swapped | Latitude ≈ 16.5, longitude ≈ 80.6 for this study area |
+| `Open-Meteo returned no daily rows` | Window outside the archive range | Check the storm's `rainfall_fetch` dates |
+| `Warning: using X; ignoring [...]` from `attach_labels.py` | Several products in one interim folder | Keep one flood product per storm (move the others out) |
+| `*.part` file in `data/raw/dem/` | DEM download was interrupted | Delete it and re-run `download_dem.py` |
 | Tests need network | They must not | Suite is offline; if a test hits the network, that is a bug |
 
 ## Rebuild checklist

@@ -16,8 +16,10 @@ from config import (
     bbox_center,
     ensure_dirs,
     get_bbox,
-    get_storm,
     load_storm_catalog,
+    point_in_bbox,
+    require_storm,
+    storm_rainfall_window,
 )
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
@@ -89,29 +91,37 @@ def main() -> None:
     args = parser.parse_args()
     ensure_dirs()
     catalog = load_storm_catalog()
-    storm = get_storm(args.storm_id, catalog)
+    storm = require_storm(args.storm_id, catalog)
     bbox = get_bbox(catalog)
     center_lat, center_lon = bbox_center(bbox)
     lat = args.lat if args.lat is not None else center_lat
     lon = args.lon if args.lon is not None else center_lon
-    rf = storm.get("rainfall_fetch") or {}
-    start = rf.get("start_date") or storm["start_date"]
-    end = rf.get("end_date") or storm["end_date"]
-    if not start or not end:
-        raise SystemExit(f"Storm {args.storm_id} is missing start/end dates")
-    if str(start) > str(end):
-        raise SystemExit(f"Invalid rainfall window: {start} > {end}")
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise SystemExit(f"Invalid coordinates: lat={lat}, lon={lon}")
+    if not point_in_bbox(lat, lon, bbox):
+        # Allowed (e.g. an upstream gauge), but usually a swapped lat/lon.
+        print(
+            f"Warning: ({lat}, {lon}) is outside the study bbox {bbox}; "
+            "check that --lat/--lon are not swapped.",
+            file=sys.stderr,
+        )
+    try:
+        start, end = storm_rainfall_window(storm)
+    except ValueError as e:
+        raise SystemExit(f"Invalid rainfall window: {e}") from e
 
     print(f"Storm {args.storm_id}: {start} → {end} @ ({lat:.4f}, {lon:.4f})")
     data = fetch_open_meteo(lat, lon, start, end)
     daily = data.get("daily") or {}
     out_csv = RAW_DIR / "rainfall" / f"{args.storm_id}_openmeteo_daily.csv"
     out_json = RAW_DIR / "rainfall" / f"{args.storm_id}_openmeteo_daily.json"
-    n_days, total_mm = summarize_daily_precip(daily)
-    n = write_csv(daily, out_csv)
-    if n != n_days:
-        # Defensive: CSV writer and summarizer should always agree on day count.
-        n_days = n
+    if not daily.get("time"):
+        raise SystemExit(
+            f"Open-Meteo returned no daily rows for {start}..{end}: "
+            f"{data.get('reason') or 'empty response'}"
+        )
+    _, total_mm = summarize_daily_precip(daily)
+    n_days = write_csv(daily, out_csv)
     meta = {
         "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
         "storm_id": args.storm_id,
@@ -128,7 +138,7 @@ def main() -> None:
         json.dump({"meta": meta, "daily": daily}, f, indent=2)
     with open(out_csv.with_suffix(".meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
-    print(f"Wrote {n} days → {out_csv}")
+    print(f"Wrote {n_days} days → {out_csv}")
     print(f"Total precip (sum): {meta['total_precip_mm']:.1f} mm")
     print(f"JSON → {out_json}")
 

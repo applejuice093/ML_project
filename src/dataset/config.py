@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,84 @@ def get_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str,
             return s
     known = list_storm_ids(catalog)
     raise KeyError(f"Storm not found: {storm_id!r} (known: {known})")
+
+
+def parse_iso_date(value: Any, field: str = "date") -> date:
+    """Parse ``YYYY-MM-DD`` (string or YAML-native date) into a ``date``.
+
+    Unquoted dates in YAML load as ``datetime.date`` while quoted ones load as
+    strings, so both are accepted. Raises ValueError with the field name.
+    """
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a YYYY-MM-DD date, got {value!r}")
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError as e:
+        raise ValueError(f"{field} must be a YYYY-MM-DD date, got {value!r}") from e
+
+
+def storm_rainfall_window(storm: dict[str, Any]) -> tuple[str, str]:
+    """Return the ``(start, end)`` ISO dates to fetch rainfall for ``storm``.
+
+    Uses ``rainfall_fetch`` when present, else the storm window itself, and
+    rejects missing, malformed or inverted dates.
+    """
+    rf = storm.get("rainfall_fetch") or {}
+    sid = storm.get("id", "?")
+    start = parse_iso_date(
+        rf.get("start_date") or storm.get("start_date"), f"{sid} start_date"
+    )
+    end = parse_iso_date(rf.get("end_date") or storm.get("end_date"), f"{sid} end_date")
+    if start > end:
+        raise ValueError(f"{sid}: rainfall window starts after it ends ({start} > {end})")
+    return start.isoformat(), end.isoformat()
+
+
+def validate_storm(storm: dict[str, Any]) -> None:
+    """Raise ValueError if a catalog storm entry is inconsistent.
+
+    Checks that it has an id, that ``start_date <= end_date``, that the
+    optional ``peak_window`` lies inside the storm window, and that the
+    rainfall fetch window is valid.
+    """
+    sid = storm.get("id")
+    if not sid:
+        raise ValueError(f"storm entry has no id: {storm!r}")
+    start = parse_iso_date(storm.get("start_date"), f"{sid} start_date")
+    end = parse_iso_date(storm.get("end_date"), f"{sid} end_date")
+    if start > end:
+        raise ValueError(f"{sid}: start_date {start} is after end_date {end}")
+    peak = storm.get("peak_window")
+    if peak:
+        p_start = parse_iso_date(peak.get("start"), f"{sid} peak_window.start")
+        p_end = parse_iso_date(peak.get("end"), f"{sid} peak_window.end")
+        if not (start <= p_start <= p_end <= end):
+            raise ValueError(
+                f"{sid}: peak_window {p_start}..{p_end} is outside {start}..{end}"
+            )
+    storm_rainfall_window(storm)
+
+
+def point_in_bbox(lat: float, lon: float, bbox: dict[str, float]) -> bool:
+    """True if ``(lat, lon)`` lies inside (or on the edge of) ``bbox``."""
+    b = validate_bbox(bbox)
+    return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
+
+
+def require_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str, Any]:
+    """CLI helper: return a validated storm or exit with a readable message.
+
+    Scripts used to die with a KeyError traceback on a mistyped --storm-id.
+    """
+    try:
+        storm = get_storm(storm_id, catalog)
+        validate_storm(storm)
+    except (KeyError, ValueError) as e:
+        msg = e.args[0] if isinstance(e, KeyError) and e.args else e
+        raise SystemExit(f"Bad --storm-id {storm_id!r}: {msg}") from e
+    return storm
 
 
 def bbox_overpass(bbox: dict[str, float]) -> str:

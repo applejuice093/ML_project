@@ -46,6 +46,18 @@ out skel qt;
 """.strip()
 
 
+def overpass_runtime_error(data: dict) -> str | None:
+    """Return Overpass's runtime-error remark, or None for a complete result.
+
+    When a query times out or runs out of memory, Overpass still answers
+    HTTP 200 with whatever elements it had, plus a ``remark`` such as
+    "runtime error: Query timed out ...". That partial result must not be
+    treated as the full waterway network.
+    """
+    remark = data.get("remark") or ""
+    return remark if "runtime error" in remark.lower() else None
+
+
 def overpass_fetch(query: str, timeout: int = 200, retry_delay_s: float = 5.0) -> dict:
     """POST the query to each mirror in turn; return the first JSON response."""
     last_err: Exception | None = None
@@ -58,7 +70,11 @@ def overpass_fetch(query: str, timeout: int = 200, retry_delay_s: float = 5.0) -
                 timeout=timeout,
             )
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+            err = overpass_runtime_error(data)
+            if err:
+                raise RuntimeError(f"partial Overpass result: {err}")
+            return data
         except Exception as e:  # noqa: BLE001
             last_err = e
             print(f"Overpass failed at {url}: {e}", file=sys.stderr)

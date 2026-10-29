@@ -8,9 +8,12 @@ gpd = pytest.importorskip("geopandas")
 from shapely.geometry import LineString, MultiLineString  # noqa: E402
 
 from build_drain_graph import (  # noqa: E402
+    clean_elevation,
+    find_default_dem,
     graph_component_stats,
     graph_from_lines,
     haversine_m,
+    lonlat_to_crs,
 )
 
 
@@ -100,3 +103,45 @@ def test_graph_component_stats_two_components():
     assert stats["n_components"] == 2
     assert stats["largest_component_nodes"] == 2
     assert stats["n_isolated_nodes"] == 0
+
+
+def test_find_default_dem_is_sorted_and_case_insensitive(tmp_path):
+    for name in ("z_dem.tif", "A_DEM.TIF", "notes.txt", "b_dem.tiff"):
+        (tmp_path / name).write_bytes(b"x")
+    assert find_default_dem(tmp_path).name == "A_DEM.TIF"
+
+
+def test_find_default_dem_none_when_missing(tmp_path):
+    assert find_default_dem(tmp_path) is None
+    assert find_default_dem(tmp_path / "absent") is None
+
+
+@pytest.mark.parametrize(
+    "value, nodata, expected",
+    [
+        (12.5, None, 12.5),
+        (-9999.0, -9999, None),
+        (float("nan"), None, None),
+        (float("nan"), float("nan"), None),
+        (float("inf"), None, None),
+        (None, None, None),
+        ("bad", None, None),
+    ],
+)
+def test_clean_elevation(value, nodata, expected):
+    assert clean_elevation(value, nodata) == expected
+
+
+def test_lonlat_to_crs_passthrough_for_wgs84_and_none():
+    pts = [(80.63, 16.51)]
+    assert lonlat_to_crs(pts, None) == pts
+    assert lonlat_to_crs(pts, "EPSG:4326") == pts
+
+
+def test_lonlat_to_crs_projects_to_utm44n():
+    pytest.importorskip("pyproj")
+    (x, y), = lonlat_to_crs([(80.63, 16.51)], "EPSG:32644")
+    # Vijayawada is ~40 km west of the UTM 44N central meridian (81°E),
+    # whose false easting is 500 km.
+    assert 440_000 < x < 480_000
+    assert 1_800_000 < y < 1_850_000
