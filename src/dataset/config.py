@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,39 @@ def get_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str,
             return s
     known = list_storm_ids(catalog)
     raise KeyError(f"Storm not found: {storm_id!r} (known: {known})")
+
+
+def parse_iso_date(value: Any, field: str = "date") -> date:
+    """Parse ``YYYY-MM-DD`` (string or YAML-native date) into a ``date``.
+
+    Unquoted dates in YAML load as ``datetime.date`` while quoted ones load as
+    strings, so both are accepted. Raises ValueError with the field name.
+    """
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a YYYY-MM-DD date, got {value!r}")
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError as e:
+        raise ValueError(f"{field} must be a YYYY-MM-DD date, got {value!r}") from e
+
+
+def storm_rainfall_window(storm: dict[str, Any]) -> tuple[str, str]:
+    """Return the ``(start, end)`` ISO dates to fetch rainfall for ``storm``.
+
+    Uses ``rainfall_fetch`` when present, else the storm window itself, and
+    rejects missing, malformed or inverted dates.
+    """
+    rf = storm.get("rainfall_fetch") or {}
+    sid = storm.get("id", "?")
+    start = parse_iso_date(
+        rf.get("start_date") or storm.get("start_date"), f"{sid} start_date"
+    )
+    end = parse_iso_date(rf.get("end_date") or storm.get("end_date"), f"{sid} end_date")
+    if start > end:
+        raise ValueError(f"{sid}: rainfall window starts after it ends ({start} > {end})")
+    return start.isoformat(), end.isoformat()
 
 
 def bbox_overpass(bbox: dict[str, float]) -> str:

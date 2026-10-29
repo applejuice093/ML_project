@@ -70,3 +70,38 @@ def test_load_storm_catalog_missing_file(tmp_path):
 def test_get_storm_error_lists_known_ids():
     with pytest.raises(KeyError, match="known"):
         config.get_storm("missing", {"storms": [{"id": "only_one"}]})
+
+
+def test_parse_iso_date_accepts_string_and_date():
+    from datetime import date
+
+    assert config.parse_iso_date("2024-08-31") == date(2024, 8, 31)
+    assert config.parse_iso_date(date(2024, 9, 1)) == date(2024, 9, 1)
+
+
+@pytest.mark.parametrize("bad", [None, "", "31-08-2024", "2024-13-01", 20240831])
+def test_parse_iso_date_rejects_bad_values(bad):
+    with pytest.raises(ValueError):
+        config.parse_iso_date(bad, "start_date")
+
+
+def test_storm_rainfall_window_prefers_rainfall_fetch():
+    storm = config.get_storm("budameru_2024_sep")
+    assert config.storm_rainfall_window(storm) == ("2024-08-25", "2024-09-15")
+
+
+def test_storm_rainfall_window_falls_back_to_storm_dates():
+    from datetime import date
+
+    # Unquoted YAML dates arrive as datetime.date objects.
+    storm = {"id": "s", "start_date": date(2024, 8, 31), "end_date": "2024-09-09"}
+    assert config.storm_rainfall_window(storm) == ("2024-08-31", "2024-09-09")
+
+
+def test_storm_rainfall_window_rejects_inverted_and_missing():
+    with pytest.raises(ValueError, match="after it ends"):
+        config.storm_rainfall_window(
+            {"id": "s", "start_date": "2024-09-09", "end_date": "2024-08-31"}
+        )
+    with pytest.raises(ValueError, match="end_date"):
+        config.storm_rainfall_window({"id": "s", "start_date": "2024-09-09"})

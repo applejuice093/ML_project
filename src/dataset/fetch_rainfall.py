@@ -18,6 +18,7 @@ from config import (
     get_bbox,
     get_storm,
     load_storm_catalog,
+    storm_rainfall_window,
 )
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
@@ -94,13 +95,10 @@ def main() -> None:
     center_lat, center_lon = bbox_center(bbox)
     lat = args.lat if args.lat is not None else center_lat
     lon = args.lon if args.lon is not None else center_lon
-    rf = storm.get("rainfall_fetch") or {}
-    start = rf.get("start_date") or storm["start_date"]
-    end = rf.get("end_date") or storm["end_date"]
-    if not start or not end:
-        raise SystemExit(f"Storm {args.storm_id} is missing start/end dates")
-    if str(start) > str(end):
-        raise SystemExit(f"Invalid rainfall window: {start} > {end}")
+    try:
+        start, end = storm_rainfall_window(storm)
+    except ValueError as e:
+        raise SystemExit(f"Invalid rainfall window: {e}") from e
 
     print(f"Storm {args.storm_id}: {start} → {end} @ ({lat:.4f}, {lon:.4f})")
     data = fetch_open_meteo(lat, lon, start, end)
