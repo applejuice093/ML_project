@@ -115,11 +115,13 @@ def main() -> None:
     daily = data.get("daily") or {}
     out_csv = RAW_DIR / "rainfall" / f"{args.storm_id}_openmeteo_daily.csv"
     out_json = RAW_DIR / "rainfall" / f"{args.storm_id}_openmeteo_daily.json"
-    n_days, total_mm = summarize_daily_precip(daily)
-    n = write_csv(daily, out_csv)
-    if n != n_days:
-        # Defensive: CSV writer and summarizer should always agree on day count.
-        n_days = n
+    if not daily.get("time"):
+        raise SystemExit(
+            f"Open-Meteo returned no daily rows for {start}..{end}: "
+            f"{data.get('reason') or 'empty response'}"
+        )
+    _, total_mm = summarize_daily_precip(daily)
+    n_days = write_csv(daily, out_csv)
     meta = {
         "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
         "storm_id": args.storm_id,
@@ -136,7 +138,7 @@ def main() -> None:
         json.dump({"meta": meta, "daily": daily}, f, indent=2)
     with open(out_csv.with_suffix(".meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
-    print(f"Wrote {n} days → {out_csv}")
+    print(f"Wrote {n_days} days → {out_csv}")
     print(f"Total precip (sum): {meta['total_precip_mm']:.1f} mm")
     print(f"JSON → {out_json}")
 
