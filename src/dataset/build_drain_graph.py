@@ -112,6 +112,43 @@ def find_default_dem(dem_dir: Path) -> Path | None:
     return cands[0] if cands else None
 
 
+def clean_elevation(value, nodata) -> float | None:
+    """Return a DEM sample as float, or None for nodata / NaN / non-numeric.
+
+    Many float DEMs use NaN as nodata, and ``NaN == NaN`` is False, so the
+    plain equality check let NaN elevations through.
+    """
+    if value is None:
+        return None
+    try:
+        z = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(z):
+        return None
+    if nodata is not None and z == float(nodata):
+        return None
+    return z
+
+
+def lonlat_to_crs(
+    coords: list[tuple[float, float]], dst_crs
+) -> list[tuple[float, float]]:
+    """Reproject lon/lat pairs to ``dst_crs`` (anything pyproj accepts).
+
+    Returns ``coords`` unchanged when ``dst_crs`` is None or geographic WGS84.
+    """
+    if dst_crs is None:
+        return coords
+    from pyproj import CRS, Transformer
+
+    dst = CRS.from_user_input(dst_crs)
+    if dst.equals(CRS.from_epsg(4326), ignore_axis_order=True):
+        return coords
+    t = Transformer.from_crs("EPSG:4326", dst, always_xy=True)
+    return [t.transform(x, y) for x, y in coords]
+
+
 def attach_dem_elevations(G: nx.Graph, dem_path: Path | None) -> int:
     """Sample DEM at nodes if rasterio + DEM exist. Returns count of nodes with z."""
     if dem_path is None or not dem_path.exists():
@@ -125,12 +162,12 @@ def attach_dem_elevations(G: nx.Graph, dem_path: Path | None) -> int:
     n = 0
     with rasterio.open(dem_path) as src:
         coords = [(G.nodes[nid]["lon"], G.nodes[nid]["lat"]) for nid in G.nodes]
+        # Node coords are EPSG:4326; a projected DEM (e.g. UTM 44N) must be
+        # sampled in its own CRS or every lookup misses the raster.
+        dem_crs = src.crs.to_wkt() if src.crs is not None else None
+        coords = lonlat_to_crs(coords, dem_crs)
         for nid, val in zip(G.nodes, sample_gen(src, coords)):
-            z = None
-            if val is not None and len(val):
-                z = float(val[0])
-                if src.nodata is not None and z == src.nodata:
-                    z = None
+            z = clean_elevation(val[0] if val is not None and len(val) else None, src.nodata)
             if z is not None:
                 G.nodes[nid]["elev_m"] = z
                 n += 1
