@@ -149,6 +149,20 @@ def point_in_bbox(lat: float, lon: float, bbox: dict[str, float]) -> bool:
     return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
 
 
+def require_storm(storm_id: str, catalog: dict[str, Any] | None = None) -> dict[str, Any]:
+    """CLI helper: return a validated storm or exit with a readable message.
+
+    Scripts used to die with a KeyError traceback on a mistyped --storm-id.
+    """
+    try:
+        storm = get_storm(storm_id, catalog)
+        validate_storm(storm)
+    except (KeyError, ValueError) as e:
+        msg = e.args[0] if isinstance(e, KeyError) and e.args else e
+        raise SystemExit(f"Bad --storm-id {storm_id!r}: {msg}") from e
+    return storm
+
+
 def bbox_overpass(bbox: dict[str, float]) -> str:
     """Format a bbox as Overpass expects: ``south,west,north,east``."""
     return (

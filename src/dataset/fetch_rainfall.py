@@ -16,9 +16,9 @@ from config import (
     bbox_center,
     ensure_dirs,
     get_bbox,
-    get_storm,
     load_storm_catalog,
     point_in_bbox,
+    require_storm,
     storm_rainfall_window,
 )
 
@@ -91,7 +91,7 @@ def main() -> None:
     args = parser.parse_args()
     ensure_dirs()
     catalog = load_storm_catalog()
-    storm = get_storm(args.storm_id, catalog)
+    storm = require_storm(args.storm_id, catalog)
     bbox = get_bbox(catalog)
     center_lat, center_lon = bbox_center(bbox)
     lat = args.lat if args.lat is not None else center_lat

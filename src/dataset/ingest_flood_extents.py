@@ -14,7 +14,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import INTERIM_DIR, RAW_DIR, ensure_dirs, get_storm
+from config import INTERIM_DIR, RAW_DIR, ensure_dirs, require_storm
 
 # A shapefile is only usable together with its sidecar files.
 SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".qix", ".sbn", ".sbx")
@@ -109,7 +109,7 @@ def main() -> None:
             print("--checklist given: skipping ingest of --input.", file=sys.stderr)
         return
 
-    storm = get_storm(args.storm_id)
+    storm = require_storm(args.storm_id)
     src = args.input
     if not src.exists():
         print(f"Input not found: {src}", file=sys.stderr)

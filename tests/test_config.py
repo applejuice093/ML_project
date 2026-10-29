@@ -138,3 +138,18 @@ def test_point_in_bbox():
     assert config.point_in_bbox(16.45, 80.56, config.DEFAULT_BBOX)  # edge counts
     # Swapped lat/lon is the classic mistake this guards against.
     assert not config.point_in_bbox(80.63, 16.51, config.DEFAULT_BBOX)
+
+
+def test_require_storm_returns_valid_storm():
+    assert config.require_storm("budameru_2024_sep")["id"] == "budameru_2024_sep"
+
+
+def test_require_storm_exits_cleanly_on_unknown_id():
+    with pytest.raises(SystemExit, match="Bad --storm-id 'typo'.*known"):
+        config.require_storm("typo")
+
+
+def test_require_storm_exits_on_inconsistent_entry():
+    cat = {"storms": [{"id": "s", "start_date": "2024-09-09", "end_date": "2024-08-31"}]}
+    with pytest.raises(SystemExit, match="after"):
+        config.require_storm("s", cat)

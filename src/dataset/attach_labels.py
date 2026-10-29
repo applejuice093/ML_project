@@ -11,7 +11,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import INTERIM_DIR, PROCESSED_DIR, ensure_dirs
+from config import INTERIM_DIR, PROCESSED_DIR, ensure_dirs, require_storm
 
 
 def list_flood_rasters(flood_dir: Path) -> list[Path]:
@@ -105,6 +105,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     ensure_dirs()
+    require_storm(args.storm_id)
 
     flood_dir = args.flood_dir or (
         INTERIM_DIR / "flood_extents" / args.storm_id
