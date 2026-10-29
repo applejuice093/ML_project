@@ -18,6 +18,7 @@ from config import (
     get_bbox,
     get_storm,
     load_storm_catalog,
+    point_in_bbox,
     storm_rainfall_window,
 )
 
@@ -95,6 +96,15 @@ def main() -> None:
     center_lat, center_lon = bbox_center(bbox)
     lat = args.lat if args.lat is not None else center_lat
     lon = args.lon if args.lon is not None else center_lon
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise SystemExit(f"Invalid coordinates: lat={lat}, lon={lon}")
+    if not point_in_bbox(lat, lon, bbox):
+        # Allowed (e.g. an upstream gauge), but usually a swapped lat/lon.
+        print(
+            f"Warning: ({lat}, {lon}) is outside the study bbox {bbox}; "
+            "check that --lat/--lon are not swapped.",
+            file=sys.stderr,
+        )
     try:
         start, end = storm_rainfall_window(storm)
     except ValueError as e:

@@ -143,6 +143,12 @@ def validate_storm(storm: dict[str, Any]) -> None:
     storm_rainfall_window(storm)
 
 
+def point_in_bbox(lat: float, lon: float, bbox: dict[str, float]) -> bool:
+    """True if ``(lat, lon)`` lies inside (or on the edge of) ``bbox``."""
+    b = validate_bbox(bbox)
+    return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
+
+
 def bbox_overpass(bbox: dict[str, float]) -> str:
     """Format a bbox as Overpass expects: ``south,west,north,east``."""
     return (

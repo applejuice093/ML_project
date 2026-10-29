@@ -131,3 +131,10 @@ def test_every_catalog_storm_is_consistent():
 def test_validate_storm_rejects_inconsistent_entries(storm, msg):
     with pytest.raises(ValueError, match=msg):
         config.validate_storm(storm)
+
+
+def test_point_in_bbox():
+    assert config.point_in_bbox(16.51, 80.63, config.DEFAULT_BBOX)
+    assert config.point_in_bbox(16.45, 80.56, config.DEFAULT_BBOX)  # edge counts
+    # Swapped lat/lon is the classic mistake this guards against.
+    assert not config.point_in_bbox(80.63, 16.51, config.DEFAULT_BBOX)
