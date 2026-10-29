@@ -118,6 +118,31 @@ def storm_rainfall_window(storm: dict[str, Any]) -> tuple[str, str]:
     return start.isoformat(), end.isoformat()
 
 
+def validate_storm(storm: dict[str, Any]) -> None:
+    """Raise ValueError if a catalog storm entry is inconsistent.
+
+    Checks that it has an id, that ``start_date <= end_date``, that the
+    optional ``peak_window`` lies inside the storm window, and that the
+    rainfall fetch window is valid.
+    """
+    sid = storm.get("id")
+    if not sid:
+        raise ValueError(f"storm entry has no id: {storm!r}")
+    start = parse_iso_date(storm.get("start_date"), f"{sid} start_date")
+    end = parse_iso_date(storm.get("end_date"), f"{sid} end_date")
+    if start > end:
+        raise ValueError(f"{sid}: start_date {start} is after end_date {end}")
+    peak = storm.get("peak_window")
+    if peak:
+        p_start = parse_iso_date(peak.get("start"), f"{sid} peak_window.start")
+        p_end = parse_iso_date(peak.get("end"), f"{sid} peak_window.end")
+        if not (start <= p_start <= p_end <= end):
+            raise ValueError(
+                f"{sid}: peak_window {p_start}..{p_end} is outside {start}..{end}"
+            )
+    storm_rainfall_window(storm)
+
+
 def bbox_overpass(bbox: dict[str, float]) -> str:
     """Format a bbox as Overpass expects: ``south,west,north,east``."""
     return (

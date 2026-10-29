@@ -105,3 +105,29 @@ def test_storm_rainfall_window_rejects_inverted_and_missing():
         )
     with pytest.raises(ValueError, match="end_date"):
         config.storm_rainfall_window({"id": "s", "start_date": "2024-09-09"})
+
+
+def test_every_catalog_storm_is_consistent():
+    for storm in config.load_storm_catalog()["storms"]:
+        config.validate_storm(storm)
+
+
+@pytest.mark.parametrize(
+    "storm, msg",
+    [
+        ({"start_date": "2024-08-31", "end_date": "2024-09-09"}, "no id"),
+        ({"id": "s", "start_date": "2024-09-09", "end_date": "2024-08-31"}, "after"),
+        (
+            {
+                "id": "s",
+                "start_date": "2024-08-31",
+                "end_date": "2024-09-09",
+                "peak_window": {"start": "2024-08-30", "end": "2024-09-01"},
+            },
+            "outside",
+        ),
+    ],
+)
+def test_validate_storm_rejects_inconsistent_entries(storm, msg):
+    with pytest.raises(ValueError, match=msg):
+        config.validate_storm(storm)
