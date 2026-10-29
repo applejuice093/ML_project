@@ -13,6 +13,7 @@ data/raw/dem/*.tif
 data/raw/dem/*.tiff
 data/raw/dem/*.hgt
 data/raw/dem/*.zip
+data/raw/dem/*.part
 data/raw/flood_extents/*.tif
 data/raw/flood_extents/*.tiff
 data/processed/drain_graph/**/*.graphml

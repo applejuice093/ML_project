@@ -59,17 +59,53 @@ def try_opentopo(bbox: dict, dataset: str, api_key: str, out: Path) -> bool:
         "API_Key": api_key,
     }
     print(f"Requesting OpenTopography {dataset} …")
-    r = requests.get(OPENTOPO_URL, params=params, timeout=300, stream=True)
-    if r.status_code != 200:
-        print(f"OpenTopography HTTP {r.status_code}: {r.text[:500]}", file=sys.stderr)
+    try:
+        r = requests.get(OPENTOPO_URL, params=params, timeout=300, stream=True)
+    except requests.RequestException as e:
+        # requests puts the full URL (including API_Key) in its messages.
+        print(f"OpenTopography request failed: {redact(str(e), api_key)}", file=sys.stderr)
         return False
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with open(out, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1 << 20):
-            if chunk:
-                f.write(chunk)
-    print(f"Wrote DEM → {out} ({out.stat().st_size} bytes)")
+    if r.status_code != 200:
+        print(
+            f"OpenTopography HTTP {r.status_code}: {redact(r.text[:500], api_key)}",
+            file=sys.stderr,
+        )
+        return False
+    try:
+        size = stream_to_file(r.iter_content(chunk_size=1 << 20), out)
+    except (OSError, requests.RequestException) as e:
+        print(f"DEM download interrupted: {redact(str(e), api_key)}", file=sys.stderr)
+        return False
+    print(f"Wrote DEM → {out} ({size} bytes)")
     return True
+
+
+def redact(text: str, secret: str) -> str:
+    """Replace ``secret`` in ``text`` so API keys never reach the console."""
+    return text.replace(secret, "***") if secret else text
+
+
+def stream_to_file(chunks, out: Path) -> int:
+    """Write byte ``chunks`` to ``out`` atomically and return the byte count.
+
+    Data goes to ``<out>.part`` first and is renamed only after the stream
+    finishes, so an interrupted download never leaves a truncated .tif that
+    build_drain_graph.py would pick up as a valid DEM.
+    """
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_name(out.name + ".part")
+    size = 0
+    try:
+        with open(tmp, "wb") as f:
+            for chunk in chunks:
+                if chunk:
+                    f.write(chunk)
+                    size += len(chunk)
+        tmp.replace(out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return size
 
 
 def write_meta(path: Path, payload: dict) -> None:
