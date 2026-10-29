@@ -1,5 +1,8 @@
 """Tests for the Overpass JSON -> GeoJSON conversion (no network)."""
 
+import pytest
+
+import fetch_osm_drains
 from fetch_osm_drains import build_query, elements_to_geojson
 
 
@@ -50,3 +53,53 @@ def test_elements_to_geojson_drops_ways_without_waterway_tag():
         ]
     }
     assert elements_to_geojson(data)["features"] == []
+
+
+class _FakeResponse:
+    def __init__(self, payload, status_ok=True):
+        self._payload = payload
+        self._ok = status_ok
+
+    def raise_for_status(self):
+        if not self._ok:
+            raise RuntimeError("HTTP 429")
+
+    def json(self):
+        return self._payload
+
+
+def test_overpass_runtime_error_detects_partial_results():
+    assert fetch_osm_drains.overpass_runtime_error({"elements": []}) is None
+    assert fetch_osm_drains.overpass_runtime_error({"remark": "note"}) is None
+    remark = "runtime error: Query timed out in \"query\" at line 3 after 181 seconds."
+    assert fetch_osm_drains.overpass_runtime_error({"remark": remark}) == remark
+
+
+def test_overpass_fetch_falls_through_failed_and_partial_mirrors(monkeypatch):
+    responses = iter(
+        [
+            _FakeResponse({}, status_ok=False),  # HTTP error
+            _FakeResponse({"elements": [1], "remark": "runtime error: out of memory"}),
+            _FakeResponse({"elements": [1, 2, 3]}),
+        ]
+    )
+    urls = []
+
+    def fake_post(url, data, headers, timeout):
+        urls.append(url)
+        return next(responses)
+
+    monkeypatch.setattr(fetch_osm_drains.requests, "post", fake_post)
+    out = fetch_osm_drains.overpass_fetch("q", retry_delay_s=0)
+    assert out == {"elements": [1, 2, 3]}
+    assert urls == fetch_osm_drains.OVERPASS_URLS[:3]
+
+
+def test_overpass_fetch_raises_when_every_mirror_fails(monkeypatch):
+    monkeypatch.setattr(
+        fetch_osm_drains.requests,
+        "post",
+        lambda *a, **k: _FakeResponse({}, status_ok=False),
+    )
+    with pytest.raises(RuntimeError, match="All Overpass endpoints failed"):
+        fetch_osm_drains.overpass_fetch("q", retry_delay_s=0)
