@@ -26,14 +26,26 @@ def is_allowed_flood_input(path: Path) -> bool:
     return path.suffix.lower() in ALLOWED_INPUT_EXTENSIONS
 
 
+def _copy_into(src: Path, dest_dir: Path) -> Path:
+    """Copy ``src`` into ``dest_dir`` unless it is already that file.
+
+    Re-running ingest on a file that already lives in the interim folder
+    used to crash with shutil.SameFileError.
+    """
+    dest = dest_dir / src.name
+    if dest.exists() and dest.resolve() == src.resolve():
+        return dest
+    return Path(shutil.copy2(src, dest))
+
+
 def copy_with_sidecars(src: Path, dest_dir: Path) -> list[Path]:
     """Copy ``src`` into ``dest_dir``; for .shp also copy any sidecar files."""
-    copied = [Path(shutil.copy2(src, dest_dir / src.name))]
+    copied = [_copy_into(src, dest_dir)]
     if src.suffix.lower() == ".shp":
         for ext in SHAPEFILE_SIDECARS:
             for cand in (src.with_suffix(ext), src.with_suffix(ext.upper())):
                 if cand.exists():
-                    copied.append(Path(shutil.copy2(cand, dest_dir / cand.name)))
+                    copied.append(_copy_into(cand, dest_dir))
                     break
     return copied
 
