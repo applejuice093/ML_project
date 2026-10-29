@@ -26,6 +26,30 @@ def list_flood_vectors(flood_dir: Path) -> list[Path]:
     )
 
 
+def pick_flood_source(flood_dir: Path) -> tuple[str, Path] | None:
+    """Choose the flood product to label from: ``(method, path)`` or None.
+
+    Rasters win over vectors. If several candidates exist only the first (by
+    name) is used, so warn instead of silently ignoring the rest.
+    """
+    rasters = list_flood_rasters(flood_dir)
+    vectors = list_flood_vectors(flood_dir)
+    if rasters:
+        method, cands = "raster_sample", rasters
+    elif vectors:
+        method, cands = "vector_intersects", vectors
+    else:
+        return None
+    others = [p.name for p in (rasters + vectors) if p != cands[0]]
+    if others:
+        print(
+            f"Warning: using {cands[0].name}; ignoring {others}. "
+            "Keep one product per storm in the interim folder.",
+            file=sys.stderr,
+        )
+    return method, cands[0]
+
+
 def sample_raster_flood_flags(nodes, raster_path: Path) -> list[bool]:
     """Sample a flood raster at each node; True where pixel value > 0."""
     import rasterio
@@ -114,24 +138,20 @@ def main() -> None:
         sys.exit(1)
 
     nodes = gpd.read_file(nodes_path)
-    rasters = list_flood_rasters(flood_dir)
-    vectors = list_flood_vectors(flood_dir)
-
-    if rasters:
-        method = "raster_sample"
+    picked = pick_flood_source(flood_dir)
+    if picked is None:
+        print(f"No .tif/.geojson/.gpkg/.shp in {flood_dir}", file=sys.stderr)
+        sys.exit(1)
+    method, source = picked
+    if method == "raster_sample":
         try:
-            flooded = sample_raster_flood_flags(nodes, rasters[0])
+            flooded = sample_raster_flood_flags(nodes, source)
         except ImportError as e:
             print(f"Missing dependency: {e}", file=sys.stderr)
             sys.exit(1)
-        source_file = str(rasters[0])
-    elif vectors:
-        method = "vector_intersects"
-        flooded = vector_intersect_flood_flags(nodes, vectors[0])
-        source_file = str(vectors[0])
     else:
-        print(f"No .tif/.geojson/.gpkg/.shp in {flood_dir}", file=sys.stderr)
-        sys.exit(1)
+        flooded = vector_intersect_flood_flags(nodes, source)
+    source_file = str(source)
 
     nodes = nodes.copy()
     nodes["flooded"] = flooded
